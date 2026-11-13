@@ -1,136 +1,185 @@
-# blc-plugin-sdk
+# 大懒猫创作平台插件 SDK v1
 
-[大懒猫创作平台](https://github.com/biglazycat-writer) 插件 SDK v1 的公开 npm 包。提供后台与页面的类型定义、插件清单 JSON Schema，以及 `definePlugin` / `connect` 两个入口。
+**简体中文** | [English](README.en.md)
+
+[blc-plugin-sdk](https://www.npmjs.com/package/blc-plugin-sdk) 是大懒猫创作平台的官方插件 SDK。当前版本 **1.1.0**，公共 API 主版本为 **1**；文档导出需要宿主支持 API 1 修订 1。npm 包提供类型、清单 schema、入口和辅助函数，实际平台能力由宿主桥接提供。
 
 ```bash
-npm install blc-plugin-sdk
+npm install --save-exact blc-plugin-sdk@1.1.0
 ```
 
-仓库：<https://github.com/biglazycat-writer/blc-plugin-sdk> · npm：<https://www.npmjs.com/package/blc-plugin-sdk>
+本仓库是公开 SDK 的源码权威。宿主随版本携带经过校验的物理工件；MCP 工程可附带副本以支持离线创建，构建不引用其他仓库源码。
 
-> **重要**：本包是薄封装，不含宿主实现。页面桥接 `__sdk.mjs` 由大懒猫创作平台在运行时注入，`connect()` 只能在该应用的插件视图内调用。插件后台运行在宿主提供的 Node 进程中，安装包本身不携带 Node。
+桌面安装包不携带 Node/npm。用户可在系统设置 → 运行环境选择本机安装，或下载经过 SHA-256 校验的应用专用版本；本机来源检查支持范围，专用下载仍锁定可复现版本。首次配置后可直接使用，切换运行环境前需要停止插件后台和任务。SDK 和加载器不依赖 Node 下载而缺失。
 
-## 版本兼容
+后台支持 Node `>=22.23.3 <23.0.0`、npm `>=10.9.9 <11.0.0`，专用下载基线仍为 Node 22.23.3 / npm 10.9.9。插件自己的 engines.node 会与实际选择的 Node 比较；精确约束不会被宿主擅自放宽。`export default definePlugin(async context => { ... })` 在激活期注册清单声明的全部命令与服务，可返回清理函数。JS/TS、ESM/CJS、标准 Node 文件/网络/子进程和兼容的原生包均在独立进程执行。TypeScript 使用工程的 `typecheck` 与 `build` 脚本，不使用类型擦除替代编译。
 
-| SDK 版本 | 插件 API | Node | 说明 |
-| --- | --- | --- | --- |
-| `1.0.0` | `biglazycat.apiVersion = 1` | `22.23.3` | 首个公开版本 |
+浏览器 `import { connect } from 'blc-plugin-sdk/browser'; const sdk = await connect()`。也可直接从页面所在目录的 `./__sdk.mjs` 导入宿主桥接（同步 connect）。页面可用任意浏览器框架；禁止在浏览器直接导入 Node 模块。业务表单由插件开发。
 
-`apiVersion` 与宿主能力一一对应，升级 SDK 前先确认目标宿主支持该版本；宿主的平台准备流程按 `package-lock.json` 执行 `npm ci`，因此插件工程应提交锁文件。
+命令返回宿主持有的任务。通过 `invocation.signal` 协作取消，通过 `invocation.progress()` 报告进度。取消、退出与超时可能留下 `uncertain` 的外部执行结果，不自动重试有副作用的操作。服务依赖在清单显式声明，服务调用传入 invocation 传播调用链；环路被拒绝。
 
-## 导出
+浏览器用 `sdk.tasks.get(task.id)` 查询单个任务的状态和结果；只允许读取本插件任务。`sdk.tasks.list()`、插件列表和诊断中的任务历史仅返回摘要，以 `hasResult` 表示是否有结果，避免历史大结果挤满控制帧。插件页展开“结果 / 日志”和外部 MCP `plugin_task` 按需获取完整单任务结果。命令单次结果仍须小于 1 MiB；大稿件或图片由插件自行分段传输。
 
-| 入口 | 内容 |
-| --- | --- |
-| `blc-plugin-sdk` | `definePlugin`、`apiVersion`、全部 `PluginContext` / `SharedAPI` / `Json` 等类型 |
-| `blc-plugin-sdk/browser` | 页面端 `connect()`、`BrowserAPI` 类型 |
-| `blc-plugin-sdk/manifest.schema.json` | `package.json` → `biglazycat` 字段的 JSON Schema（draft 2020-12） |
+文档 API 针对明确的工作区、编辑器和文档身份。先 snapshot，再携带 revision、draftHash、唯一 operationId 调用 apply。变更经目标编辑器事务和现有保存流程，其他脏编辑器、外部修改或标签切换会产生冲突。超时后先查询 operation，不重复提交。Node 直接文件写入绕过这些保证。
 
-运行时代码是纯 ESM、零依赖；`sideEffects: false`，打包工具可安全 tree-shake。
+配置最多 64 KiB，控制帧最多 1 MiB。大资源应分段读取。事件在应用运行期间通知已提交变化；没有永久送达或恰好一次保证。定时任务声明 skip/once，检查点跨应用重启保存，恢复后按策略跳过或补一次。
 
-## 后台入口
+视图关闭释放桥接与渲染进程，不停止后台任务。setState 只存小型恢复状态；凭据放到后台 credentials。Windows 使用系统用户绑定的 DPAPI；其他平台需配置系统凭据服务后使用。插件是可信本地程序，进程隔离不是安全沙箱。
 
-```ts
-import { definePlugin, type Invocation, type PluginContext } from 'blc-plugin-sdk';
+## 最小工程与编译
 
-export default definePlugin(async (ctx: PluginContext) => {
-  ctx.commands.register('hello.world', async (_args, invocation: Invocation) => {
-    invocation.signal.throwIfAborted();
-    await invocation.progress(0.5, '处理中');
-    return { message: `你好，来自 ${ctx.pluginId}` };
-  });
-
-  return () => {
-    // 停用插件时释放连接、定时器等资源
-  };
-});
-```
-
-所有命令必须在激活期注册，且与清单中的 `contributes.commands` 逐字一致。命令返回宿主持有的**任务**，结果需可序列化为 JSON。
-
-## 页面入口
-
-```ts
-import { connect } from 'blc-plugin-sdk/browser';
-
-const sdk = await connect();
-const view = await sdk.context();
-
-const task = await sdk.commands.invoke('hello.world');
-for (;;) {
-  const current = await sdk.tasks.get(task.id);
-  if (current.state === 'completed') { console.log(current.result); break; }
-  if (['failed', 'cancelled', 'interrupted', 'uncertain'].includes(current.state)) {
-    throw new Error(current.error ?? current.state);
-  }
-  await new Promise(resolve => setTimeout(resolve, 150));
-}
-```
-
-页面用 `sdk.setState()` 保存小型恢复状态（≤ 64 KiB），`sdk.onSave()` 在宿主保存时写回并清除 dirty。禁止在浏览器直接导入 Node 模块；页面可以使用任意前端框架。
-
-## 插件清单
-
-`package.json` 的 `biglazycat` 字段是唯一清单，字段集合受 `manifest.schema.json` 约束（顶层 `additionalProperties: false`）。最简形式：
+通过外部 MCP 的 `plugin_project_create` 在空目录生成普通工程，或自行创建 npm 工程。产品不内置源码编辑器。`package.json` 的 `biglazycat` 字段是唯一清单；完整签名见随 SDK 提供的 `manifest.schema.json` 与 `index.d.ts`。
 
 ```json
 {
-  "name": "blc-plugin-hello",
+  "name": "my-plugin",
   "version": "0.1.0",
   "type": "module",
-  "engines": { "node": "22.23.3" },
-  "dependencies": { "blc-plugin-sdk": "1.0.0" },
-  "scripts": { "build": "tsc -p tsconfig.node.json" },
+  "engines": { "node": ">=22.23.3 <23.0.0" },
+  "dependencies": { "blc-plugin-sdk": "1.1.0" },
+  "devDependencies": { "typescript": "5.9.3", "@types/node": "22.19.0" },
+  "scripts": { "typecheck": "tsc --noEmit", "build": "tsc" },
   "biglazycat": {
     "apiVersion": 1,
-    "displayName": "Hello",
-    "platforms": ["windows/amd64", "darwin/arm64", "linux/amd64"],
+    "displayName": "我的插件",
     "main": "dist/main.js",
+    "platforms": ["windows/amd64", "darwin/amd64", "darwin/arm64", "linux/amd64"],
     "contributes": {
-      "commands": [{ "id": "hello.world", "title": "打招呼" }]
+      "commands": [{ "id": "hello", "title": "运行示例", "aiCallable": true }]
     }
   }
 }
 ```
 
-完整字段与约束见 [`manifest.schema.json`](manifest.schema.json)、类型见 [`index.d.ts`](index.d.ts)。主要能力：命令、菜单、视图、服务、编辑器、提供者、定时任务、文档与工作区资源、图片库、凭据存储、事件与 AI 调用。
+上例从 npm 安装 SDK；MCP 离线创建的工程使用自己的本地副本，并设置 `install-links=true`。提交工程的 `package-lock.json`、源码、构建脚本和测试，排除 `node_modules`。平台准备流程执行锁定版本的 `npm ci`；外部编程工具执行 `npm install` 或 MCP `plugin_project_run(script:"install")` 可更新锁文件。“类型检查”和“构建”分别报告，不会将 Node 类型擦除当作 TS 编译。
 
-## 从本地副本迁移
+```ts
+import { definePlugin } from 'blc-plugin-sdk'
 
-早期工程使用 `vendor/plugin-sdk` 物理副本与 `@biglazycat/plugin-sdk` 包名。迁移步骤：
+export default definePlugin(ctx => {
+  ctx.commands.register('hello', async (_args, invocation) => {
+    invocation.signal.throwIfAborted()
+    await invocation.progress(0.5, '正在处理')
+    return { message: '你好，大懒猫创作平台！' }
+  })
+  return async () => { /* 释放自己创建的连接、监听器等 */ }
+})
+```
 
-1. `package.json` 依赖改为 `"blc-plugin-sdk": "1.0.0"`，删除 `file:vendor/plugin-sdk` 与 `.npmrc` 的 `install-links=true`。
-2. 源码中所有 `@biglazycat/plugin-sdk` / `@biglazycat/plugin-sdk/browser` 改为 `blc-plugin-sdk` / `blc-plugin-sdk/browser`（导出签名不变）。
-3. 删除 `vendor/plugin-sdk` 目录；`files` 字段中去掉 `vendor`。
-4. 重新执行 `npm install` 生成 `package-lock.json`，再 `npm run build && npm test`。
+所有命令和服务必须在激活时注册且与清单一致。不要在首次调用时再补注册。纯页面插件可省略 `main`；后台插件不必创建页面。普通 Node ESM/CJS 和动态导入均可使用，原生模块必须匹配系统、架构与 Node ABI。TS 路径别名、JSX/TSX 与 UI 打包遵循所选工具链。
 
-> 运行时桥接仍由宿主提供，因此**仅升级本包不能获得新宿主能力**；`apiVersion` 不变时行为保持一致。
+## 页面、草稿与保存
+
+`contributes.views` 中的每个页面声明 `id/title/entry/defaultLocation`。`entry` 指向普通 HTML 产物，可由 Vite、React、Vue 等构建。页面中的 `blc-plugin-sdk/browser` 提供异步 `connect()`，不导入 Node 入口。
+
+```ts
+import { connect } from 'blc-plugin-sdk/browser'
+const sdk = await connect()
+const view = await sdk.context()
+let draft = view.state ?? { text: '' }
+
+async function edited(text: string) {
+  draft = { text }
+  await sdk.setState(draft, true)
+}
+
+sdk.onSave(async () => {
+  // 先将内容提交到自己的资源；失败要抛出错误，保持 dirty。
+  await persistDraft(draft)
+  await sdk.setState(draft, false)
+})
+```
+
+`persistDraft` 是插件自身的持久化函数；自定义文件编辑器可以使用下节 `workspace.import`。页面状态是最多 64 KiB 的 JSON 检查点，不是任意文件数据库。宿主保存 `pluginId/viewId/instanceId/workspaceId/resource` 关联，防止恢复到其他文件。状态写入只保留一个在途请求和一个最新快照；同批写入共享完成结果，保存确认等待已提交状态。
+
+浏览器最多 32 个在途 SDK 请求，宿主每个页面最多 16 个并发处理。桥接超时或连接失效时向用户显示错误，不盲目重放副作用。后台的 `ctx.views.close(instanceId)` 拒绝关闭脏页面，用户保存或放弃通过应用外壳处理。
+
+主题由 `view.theme` 的 CSS 变量提供并动态更新。页面只能访问自己的视图会话与已有 SDK，不能调用宿主任意 Wails 方法。后台需要完整文件/网络能力时使用 Node API。
+
+`sdk.ui.openExternal(url)` 在系统默认浏览器打开 HTTP(S) 链接。插件原生页面保持自己的来源边界；用户点击外部服务或账号控制台链接时使用此接口。
+
+## 内容与资源身份
+
+核心文档先 `documents.snapshot({workspaceId,workspaceSession,documentId,editorId,windowId})`，再用返回的 `revision/draftHash` 和新的 `operationId` 调用 `documents.apply`。文档、标签、工作区、草稿或持久化版本改变会产生可见冲突。目标编辑器通过现有事务与保存协调器提交，保留该编辑器已有的撤销能力，不承诺任意跨文件副作用可撤销。
+
+自定义 UTF-8 文件先 `workspace.read`，携带完整读取结果的 `hash` 调用：
+
+```ts
+const result = await sdk.workspace.import({
+  workspaceId, workspaceSession, path: 'notes/example.catnote',
+  expectedHash: loadedHash, content: nextText, operationId: crypto.randomUUID(),
+})
+```
+
+没有 `expectedHash` 表示创建新文件，不能用它覆盖已存在文件。核心文档已有内容必须经 `documents.apply`。资源变更限 700 KiB，读取单次至多 512 KiB、文本文件总量至多 16 MiB；更大或二进制资源可直接使用 Node 文件 API，并自行处理并发语义。
+
+图片库使用 `images.list({query,offset,limit})` 分页，每页最多 100 张，返回 `id/name/src/width/height` 与 `total`。`images.read({src,offset,limit,hash})` 将图片转为 data URL 分段返回，每段最多 384 KiB、总量最多 28 MiB。将首段的 `hash` 传给后续读取，图片变化返回 `RESOURCE_CHANGED`。浏览器自动绑定页面的工作区身份；Node 端需传 `workspaceId/workspaceSession`。工作区切换后原页面的读取被拒绝。
+
+`documents.operation(operationId)` 查询确认结果。相同 ID 与相同规范化参数返回原记录，不重复提交；不同参数被拒绝。崩溃后的未确认操作变为 `uncertain`。操作记录落盘失败时不报告确认完成。当前日志目录最多保留 10000 份操作回执，到上限拒绝新操作；没有自动删除去重记录或产品内归档入口，不能手工删除后重试历史操作。
+
+## 服务、导出、事件与定时
+
+`biglazycat.dependencies` 声明运行插件服务依赖，与 npm `dependencies` 分开。每项包含 `plugin/service/version/optional`。必需依赖缺失、版本不符或依赖环在启用/启动时拒绝；可选依赖不会自动启动不兼容版本，调用方处理不可用错误。
+
+`ctx.services.provide('text', { transform })` 对应清单服务的方法；`ctx.services.call(plugin, service, method, args, invocation)` 传播调用链。服务调用限 20 秒、深度 8，环路返回错误。通用宿主导出契约为 `export.text` v1：服务 `transform({text, format: 'markdown', filename}, invocation)` 返回 `{text}`；用户选择提供者后才使用它，失败时不静默换回内置实现。
+
+可订阅 `startup`、`workspace.opened`、`document.committed`、`plugin:<包名>:<事件名>`。`ctx.events.emit(name, payload)` 自动添加插件命名空间。工作区恢复也发送打开事件；通知只覆盖接入的提交路径，不是所有任意 Node 文件修改的广播。事件队列满时丢弃并记录事件 ID；消费者需要重新读取领域状态。
+
+计划任务使用 `contributes.schedules` 的 `id/command/intervalSeconds/catchUp`，最短间隔由 Schema 校验。检查点写入安装索引，跨重启保留；超过间隔及 5 秒调度宽限后，`skip` 跳过、`once` 最多补一次；同命令未结束时不重叠触发。先保存检查点再调度，保存失败不执行；两步之间崩溃可能跳过一轮，但不会重放已占用的时间段。不安装系统常驻服务，也不保证恰好一次。事件订阅者可通过 `storage` 保存业务检查点，激活后重新读取领域状态；事件通知本身不是持久队列。
+
+## 宿主工具与诊断
+
+现有 AI 会话使用固定工具：`plugins_list`、`plugin_diagnostics`、`plugin_task`、`plugin_cancel`、`plugin_enable`、`plugin_open_view`、`plugin_sdk`、`plugin_project_create/files/read/write/run`、`plugin_install`、`plugin_invoke`。写操作沿用 AgentService 的审批和调用 ID；工具不会接受模型自行注入工作区上下文。再次收到相同工具调用 ID 时返回既有结果，未确认操作不重放。
+
+标准错误码包括 `API_MISMATCH`、`NODE_MISMATCH`、`BACKPRESSURE`、`STALE_GENERATION`、`WORKSPACE_CHANGED`、`DRAFT_CONFLICT`、`DIRTY_VIEW`、`SAVE_TIMEOUT`、`OPERATION_CONFLICT`。任务历史由宿主持有，页面或 AI 对话关闭不结束后台任务。
+
+运行上限：16 个插件后台、32 个页面、128 个未完成命令任务、8 个安装/开发准备任务；准备脚本串行且排队可取消。每个插件日志至多 500 条/256 KiB。默认 V8 堆 256 MiB，进程树资源阈值 512 MiB、整机 CPU 25%；Windows 使用 Job Object 硬配额，macOS/Linux 每秒采样，CPU 连续 10 次超限才停止。不能把 V8 堆限制或采样阈值称作所有平台的内存硬上限。
+
+已运行后台异常退出后按 2 秒、4 秒退避，最多自动重启两次；仅重新激活，不重放命令、事件或外部操作。连续故障计数跨应用重启保留，达到上限后需用户明确启用或重启才重置。首次激活、版本切换失败以及必需依赖失效保持故障状态，用户处理后恢复。命令本身没有统一短总时限，心跳仅检测事件循环是否响应。取消超时会结束同一实例中的其他任务，故障 UI 可重载并恢复已提交检查点。
+
+## 外部 MCP 与开发模式
+
+在系统设置 → MCP 服务启用连接并勾选“插件开发与管理”工具。外部编程工具通过应用 `--mcp-stdio` 接入；先读取 `plugin_sdk` 和 `get_app_guide(section:"plugins")`。`plugin_project_create` 将 SDK 物理副本写入指定空目录，外部工具自行编辑文件，无需产品内工程管理界面。
+
+依次用 `plugin_project_run` 的 lock/install/typecheck/build/test 脚本准备工程。写工具必须提供唯一 `requestId`；安装和执行工程脚本还需要 `trusted:true`。通过 `plugin_task` 读取完成状态，超时不重放副作用。`plugin_install({source:{kind:"directory",location:"绝对路径"},development:true,prepare:false,trusted:true,requestId:"唯一标识"})` 返回任务，成功后 `plugin_enable`、`plugin_open_view` 预览。
+
+开发模式每秒检测源码，稳定两次后在隔离目录执行 typecheck/build，再切换成功产物并重新打开同一页面实例。dist、node_modules、.git、.cache、coverage 不触发构建；失败可从 plugins_list 的 development 和 plugin_task 查看，原成功页面保留。未完成任务和未保存页面会推迟刷新。依赖先在外部工程安装；切换源码、停用或卸载会停止后续自动刷新，卸载保留源码。凭据仅存后台 credentials，不能进入清单、源码或页面恢复状态。
+
+
+## API 1 修订 1 与升级规则
+
+SDK 1.1.0 保持 API 主版本 1。新插件使用 `biglazycat.minimumApiRevision: 1` 声明文档导出所需能力；宿主在安装前拒绝高于自身的修订。SDK 包版本、API 主版本/修订、RPC 线格式和安装索引格式分别维护。已有 API 1 字段、含义和错误码在普通升级中保持稳定。
+
+`PluginError.code` 是机器可读错误码。宿主文档冲突、工作区切换和资源变化分别返回 `DRAFT_CONFLICT`、`WORKSPACE_CHANGED`、`RESOURCE_CHANGED`；响应过大返回 `MESSAGE_TOO_LARGE`，不结束健康插件进程。
+
+```ts
+import { waitForTask, readDocument } from "blc-plugin-sdk";
+const started = await sdk.commands.invoke("hello");
+const finished = await waitForTask(sdk.tasks, started.id, { timeoutMs: 30000, signal });
+const doc = await readDocument(ctx.documents, target, { timeoutMs: 30000, signal });
+// doc.content 是 Markdown v1，不需要插件理解宿主 Tiptap 节点。
+```
+
+`waitForTask` 默认超时 30 秒、轮询间隔 150 ms。取消和超时只结束本地等待，不重放或自动取消后台任务；按 taskId 查询或明确调用 tasks.cancel。外部结果 uncertain 必须核实。
+
+`documents.export` 创建不可变 Markdown v1 快照，返回 exportId、UTF-8 字节 offset/nextOffset/totalBytes、SHA-256、revision、draftHash 与 dirty。总内容至多 32 MiB，每块至多 96 KiB；最后一块释放快照，未完成快照两分钟过期。每插件最多四份、宿主合计 64 MiB。后续块必须使用同一插件/工作区会话/文档/编辑器身份。`readDocument` 封装分块、边界检查、超时和完整性校验。
+
+原有 documents.snapshot 仍提供原始 markdown/tiptap 内容，用于带 revision/draftHash 的原位编辑；新增 formatVersion=1。发布、阅读和导出优先用 readDocument。Tiptap 未知节点应原样保留；不要用部分解析后的结果覆盖全文。宿主拒绝无效富文本写回。
+
+workspace.list 返回 WorkspaceRecord[]；resources/search 返回 ResourcePage。API 1 资源键保留已发布的大小写（Rel、Name、Kind 等），不会跟随内部结构自动增加或变更字段。
+
+页面建议构建目标为 ES2022、Chromium 109 / Safari 16.4 及等效 WebKit；最终支持平台仍以宿主原生 UI 验收为准。不要把 Node 版本当作浏览器内核版本。
 
 ## 开发与发布
 
 ```bash
-npm install           # 无第三方依赖，仅生成锁文件
-npm test              # node --test tests/*.test.mjs
-npm pack --dry-run    # 检查将要发布的文件清单
-npm publish --access public
+npm ci
+npm test                 # JS 测试 + 严格 TypeScript 消费者检查
+npm pack --dry-run       # 核对 npm 包内容，含中英文 README
 ```
 
-### GitHub Release 自动发布
+GitHub Actions 在 push/PR 时检查基线 Node 22.23.3 和 Node 22.x。发布工作流在 GitHub Release 发布或手动触发时运行测试和包检查，校验 Release 标签与 package.json 版本一致，再发布 npm。已发布版本不可覆盖。宿主升级还须运行固定旧 SDK/插件工件的契约测试，单独通过 SDK 测试不能证明所有原生 UI 平台均已验收。
 
-`.github/workflows/publish.yml` 监听 **`release: published`**：发布 GitHub Release 就自动推送到 npm，也可以在 Actions 页面手动 `workflow_dispatch` 运行。
+## 许可证
 
-一次性配置：仓库 **Settings → Secrets and variables → Actions → New repository secret**，名称 `NPM_TOKEN`，值填 npmjs.com 生成的 **Classic Token / Automation**（需具备 publish 权限，且不能是只读或已过期的 granular token）。
-
-发布新版本的步骤：
-
-1. 修改 `package.json` 的 `version`，更新 `CHANGELOG.md`，提交并推送到 `main`。
-2. 在 GitHub 上创建 Release，标签填 **`v` + 版本号**（例如 `v1.0.1`），必须与 `package.json` 完全一致，否则 workflow 会直接报错退出。
-3. 点 **Publish release**，工作流自动执行 `npm ci` → `npm test` → `npm pack --dry-run` → `npm publish --access public --provenance`。
-
-幂等保护：如果 `blc-plugin-sdk@<version>` 已经存在于 npm，工作流会跳过发布，因此重复触发 Release、或先本机手工发布再补 Release 都不会报 `E403`。本机手工发布需先 `npm login`，且不生成 provenance，推荐统一走 Release。
-
-版本策略：与宿主 `apiVersion` 对齐，遵循语义化版本；破坏性变更必须同时提升宿主 API 版本，不在包内做运行时兼容层。
-
-## 授权
-
-[MIT](LICENSE) © 2026 大懒猫创作平台 contributors
+[MIT](LICENSE)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。

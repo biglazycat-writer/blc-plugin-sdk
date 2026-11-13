@@ -338,6 +338,11 @@
       },
       "required": [],
       "additionalProperties": false
+    },
+    "minimumApiRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Required additive API revision; omitted means the original API 1 contract."
     }
   },
   "required": [
@@ -415,7 +420,9 @@
           "minimum": 0
         }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     }
   }

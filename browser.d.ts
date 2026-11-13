@@ -1,5 +1,7 @@
 import type { SharedAPI, Json, Task, ViewSession } from './index.js';
 export interface BrowserAPI extends SharedAPI {
+  readonly apiVersion: 1;
+  readonly apiRevision: number;
   onSave(handler: () => void | Promise<void>): () => void;
   context(): Promise<ViewSession>;
   setState(state: Json, dirty?: boolean): Promise<void>;
