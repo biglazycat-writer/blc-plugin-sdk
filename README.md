@@ -115,7 +115,19 @@ npm pack --dry-run    # 检查将要发布的文件清单
 npm publish --access public
 ```
 
-发布走 GitHub Actions：在仓库 Settings → Secrets and variables → Actions 添加 `NPM_TOKEN`（npm Automation token），然后推送 `v1.0.0` 标签或手动运行 workflow；CI 会执行测试、打包并用 provenance 发布。手动发布需本机 `npm login`。
+### GitHub Release 自动发布
+
+`.github/workflows/publish.yml` 监听 **`release: published`**：发布 GitHub Release 就自动推送到 npm，也可以在 Actions 页面手动 `workflow_dispatch` 运行。
+
+一次性配置：仓库 **Settings → Secrets and variables → Actions → New repository secret**，名称 `NPM_TOKEN`，值填 npmjs.com 生成的 **Classic Token / Automation**（需具备 publish 权限，且不能是只读或已过期的 granular token）。
+
+发布新版本的步骤：
+
+1. 修改 `package.json` 的 `version`，更新 `CHANGELOG.md`，提交并推送到 `main`。
+2. 在 GitHub 上创建 Release，标签填 **`v` + 版本号**（例如 `v1.0.1`），必须与 `package.json` 完全一致，否则 workflow 会直接报错退出。
+3. 点 **Publish release**，工作流自动执行 `npm ci` → `npm test` → `npm pack --dry-run` → `npm publish --access public --provenance`。
+
+幂等保护：如果 `blc-plugin-sdk@<version>` 已经存在于 npm，工作流会跳过发布，因此重复触发 Release、或先本机手工发布再补 Release 都不会报 `E403`。本机手工发布需先 `npm login`，且不生成 provenance，推荐统一走 Release。
 
 版本策略：与宿主 `apiVersion` 对齐，遵循语义化版本；破坏性变更必须同时提升宿主 API 版本，不在包内做运行时兼容层。
 

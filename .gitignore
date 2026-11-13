@@ -4,6 +4,8 @@ coverage/
 *.log
 .env
 .env.*
+.npm-token
+.npmrc*
 .DS_Store
 .idea/
 .vscode/

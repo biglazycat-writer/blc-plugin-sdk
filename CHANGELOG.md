@@ -12,7 +12,7 @@
 - `blc-plugin-sdk/browser`：页面端 `connect()` 与 `BrowserAPI` 类型；桥接仍由宿主在运行时注入。
 - `blc-plugin-sdk/manifest.schema.json`：`package.json` → `biglazycat` 清单的 JSON Schema（draft 2020-12）。
 - 自带测试覆盖插件激活/清理、无宿主时的 `API_MISMATCH`、清单扩展点约束。
-- GitHub Actions 发布工作流（ tag `v*` 或手动触发，需 `NPM_TOKEN` secret，带 provenance）。
+- GitHub Actions 发布工作流：`release: published` 触发（或手动运行），需 `NPM_TOKEN` secret，带 provenance；发布前校验 Release 标签与版本号一致，并对已发布版本做幂等跳过。
 
 ### 变更
 
