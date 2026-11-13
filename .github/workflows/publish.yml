@@ -11,6 +11,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    # setup-node 会把 ${NODE_AUTH_TOKEN} 写进 .npmrc，job 级提供后
+    # 前面的 npm view 幂等检查也不会因占位符未替换而失败。
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,5 +54,3 @@ jobs:
       - name: Publish
         if: steps.version.outputs.skip == 'false'
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
