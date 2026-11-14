@@ -8,6 +8,8 @@ definePlugin(async ctx => {
   const name: string | undefined = page.items[0]?.Name;
   const document = await readDocument(ctx.documents, { workspaceId: 'w', workspaceSession: 's', documentId: 'd', editorId: 'e' });
   const format: 'markdown' = document.format;
+  const navigation: void = await ctx.ui.openDocument({ workspaceId: 'w', workspaceSession: 's', documentId: 'd' });
+  void navigation;
   void name; void format;
 });
 
@@ -17,3 +19,12 @@ const result: Json | undefined = task.result;
 const error = new PluginError('DRAFT_CONFLICT', 'changed');
 const code: string = error.code;
 void result; void code;
+
+const mode: 'light' | 'dark' = browser.appearance.getColorScheme();
+const unsubscribe: () => void = browser.appearance.onDidChangeColorScheme(next => { const resolved: 'light' | 'dark' = next; void resolved; });
+await browser.ready();
+const opened: void = await browser.ui.openDocument({ workspaceId: 'w', workspaceSession: 's', documentId: 'd' });
+// @ts-expect-error A document ID alone cannot identify a workspace session.
+await browser.ui.openDocument({ documentId: 'd' });
+void opened;
+void mode; unsubscribe();

@@ -2,10 +2,12 @@
 
 [简体中文](README.md) | **English**
 
-[blc-plugin-sdk](https://www.npmjs.com/package/blc-plugin-sdk) is the official plugin SDK for **大懒猫创作平台**. The current SDK version is **1.1.0**, using public **API 1**. Markdown document export requires a host implementing **API 1 revision 1**.
+[blc-plugin-sdk](https://www.npmjs.com/package/blc-plugin-sdk) is the official plugin SDK for **大懒猫创作平台**. This source tree is the **1.3.0 candidate, not yet published to npm**, using public **API 1**. Markdown document export requires revision 1; appearance, page readiness and user-entry declarations require revision 2; document navigation requires revision 3.
+
+Before publication, validate this repository and run `npm pack`, copy the resulting artifact into the plugin project's `vendor/` directory, then install it:
 
 ```bash
-npm install --save-exact blc-plugin-sdk@1.1.0
+npm install --save-exact ./vendor/blc-plugin-sdk-1.3.0.tgz
 ```
 
 The package provides TypeScript declarations, a manifest schema, entry points and helper functions. Platform capabilities are implemented by the host bridge. This repository is the authoritative SDK source; the host carries a verified physical artifact. Projects generated through MCP can include their own offline SDK copy. Builds do not import another repository's source files.
@@ -28,7 +30,7 @@ Create a regular npm project, or use the host's `plugin_project_create` MCP tool
   "version": "0.1.0",
   "type": "module",
   "engines": { "node": ">=22.23.3 <23.0.0" },
-  "dependencies": { "blc-plugin-sdk": "1.1.0" },
+  "dependencies": { "blc-plugin-sdk": "file:vendor/blc-plugin-sdk-1.3.0.tgz" },
   "devDependencies": { "typescript": "5.9.3", "@types/node": "22.19.0" },
   "scripts": { "typecheck": "tsc --noEmit", "build": "tsc" },
   "biglazycat": {
@@ -43,7 +45,7 @@ Create a regular npm project, or use the host's `plugin_project_create` MCP tool
 }
 ```
 
-Commit source, scripts, tests and `package-lock.json`; exclude `node_modules` and build output. Host preparation uses `npm ci`. Use `npm install` or `plugin_project_run(script:"install")` to update the lockfile. Offline MCP projects use `install-links=true` to install their local SDK copy as physical files.
+Include the verified SDK tgz with this example's source and installation package. Commit source, scripts, tests and `package-lock.json`; exclude `node_modules` and build output. Host preparation uses `npm ci`. Use `npm install` or `plugin_project_run(script:"install")` to update the lockfile. Offline MCP projects use `install-links=true` to install their local SDK directory copy as physical files.
 
 ```ts
 import { definePlugin } from 'blc-plugin-sdk'
@@ -181,7 +183,7 @@ Keep credentials in backend `credentials`, never in source, manifests, logs or v
 
 ## API evolution, development and release
 
-SDK 1.1.0 keeps API major version 1. The host rejects a plugin whose `minimumApiRevision` exceeds its capabilities. SDK package versions, API major/revision, RPC wire format and installation-index format evolve separately. Existing API 1 fields, meanings and error codes are maintained across ordinary upgrades.
+SDK 1.3.0 keeps API major version 1. The host rejects a plugin whose `minimumApiRevision` exceeds its capabilities. SDK package versions, API major/revision, RPC wire format and installation-index format evolve separately. Existing API 1 fields, meanings and error codes are maintained across ordinary upgrades.
 
 Recommended view build targets are ES2022, Chromium 109 / Safari 16.4 and equivalent WebKit. Final platform support depends on native host acceptance tests; a Node version does not specify a browser engine.
 
@@ -193,6 +195,24 @@ npm pack --dry-run       # Inspect package contents, including both README langu
 
 GitHub Actions tests pushes and pull requests on Node 22.23.3 and Node 22.x. Publishing a GitHub Release or manually dispatching the publishing workflow runs tests and package checks, verifies a release tag against `package.json`, then publishes to npm. Published versions cannot be overwritten. Host releases must also test frozen older SDK/plugin artifacts; SDK tests alone do not validate every native UI platform.
 
+## API 1 revision 2: user entries and appearance
+
+Declare `minimumApiRevision: 2` when using these additions. Commands with `visibility: "internal"` have no command-palette, keyboard-shortcut or toolbar entry, while views can still invoke them. `aiCallable` controls AI access independently. Omitted visibility stays public. A view can declare `commandPalette: false` to avoid duplicating its opening command.
+
+`sdk.appearance.getColorScheme()` synchronously returns the host's resolved `light` or `dark` mode. `sdk.appearance.onDidChangeColorScheme(listener)` subscribes and returns an unsubscribe function. The host sets `data-color-scheme` and CSS `color-scheme` before loading the page and updates them through the bridge. System mode follows the operating system; theme packages are independent of this API.
+
+Call `await sdk.ready()` after committing the first usable UI, including an error screen. Do not wait for `requestAnimationFrame`: hidden native containers can suspend animation frames. `ViewSession.timings` and diagnostics record container, loaded, bridge and ui milliseconds since mount, separating native startup, resource loading and plugin initialization.
+
 ## License
 
 [MIT](LICENSE). See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## API 1 revision 3: plugin-owned pages and document navigation
+
+Plugins render their full page, including titles, back buttons and refresh controls. The host provides the container, capabilities and save protocol. Manifest titles still name application tabs and windows. There is no fixed toolbar inside a healthy view; host error recovery remains available when a page fails.
+
+Declare `minimumApiRevision: 3` for `sdk.ui.openDocument({ workspaceId, workspaceSession, documentId })`. It focuses an existing creation-document tab in the main window or reopens it if closed. No editorId is required. Collection documents open their chapter; standalone documents open their own tab.
+
+Browser navigation is bound to the view's captured workspace session while documentId remains plugin-selected. Node callers provide the workspace and session explicitly. Switched or reopened sessions are rejected, and expired requests cannot commit late. The Promise waits for save coordination and main-window confirmation. Errors include NAVIGATION_CANCELLED, NAVIGATION_TIMEOUT and WORKSPACE_CHANGED.
+
+The plugin decides whether to save its own draft before navigating. A publishing plugin can show a back button only when its original-document context is complete, persist its draft first and keep the page open on failure. Other plugins are free to omit that button.

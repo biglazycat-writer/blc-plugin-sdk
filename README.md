@@ -2,10 +2,12 @@
 
 **简体中文** | [English](README.en.md)
 
-[blc-plugin-sdk](https://www.npmjs.com/package/blc-plugin-sdk) 是大懒猫创作平台的官方插件 SDK。当前版本 **1.1.0**，公共 API 主版本为 **1**；文档导出需要宿主支持 API 1 修订 1。npm 包提供类型、清单 schema、入口和辅助函数，实际平台能力由宿主桥接提供。
+[blc-plugin-sdk](https://www.npmjs.com/package/blc-plugin-sdk) 是大懒猫创作平台的官方插件 SDK。当前源码为 **1.3.0 候选版，尚未发布到 npm**，公共 API 主版本为 **1**；文档导出需要 API 1 修订 1，明暗模式、页面就绪与用户入口声明需要修订 2，文稿导航需要修订 3。包提供类型、清单 schema、入口和辅助函数，实际平台能力由宿主桥接提供。
+
+发布前先在本仓库验证并执行 `npm pack`，将生成的工件复制到插件工程的 `vendor/`，再安装：
 
 ```bash
-npm install --save-exact blc-plugin-sdk@1.1.0
+npm install --save-exact ./vendor/blc-plugin-sdk-1.3.0.tgz
 ```
 
 本仓库是公开 SDK 的源码权威。宿主随版本携带经过校验的物理工件；MCP 工程可附带副本以支持离线创建，构建不引用其他仓库源码。
@@ -36,7 +38,7 @@ npm install --save-exact blc-plugin-sdk@1.1.0
   "version": "0.1.0",
   "type": "module",
   "engines": { "node": ">=22.23.3 <23.0.0" },
-  "dependencies": { "blc-plugin-sdk": "1.1.0" },
+  "dependencies": { "blc-plugin-sdk": "file:vendor/blc-plugin-sdk-1.3.0.tgz" },
   "devDependencies": { "typescript": "5.9.3", "@types/node": "22.19.0" },
   "scripts": { "typecheck": "tsc --noEmit", "build": "tsc" },
   "biglazycat": {
@@ -51,7 +53,7 @@ npm install --save-exact blc-plugin-sdk@1.1.0
 }
 ```
 
-上例从 npm 安装 SDK；MCP 离线创建的工程使用自己的本地副本，并设置 `install-links=true`。提交工程的 `package-lock.json`、源码、构建脚本和测试，排除 `node_modules`。平台准备流程执行锁定版本的 `npm ci`；外部编程工具执行 `npm install` 或 MCP `plugin_project_run(script:"install")` 可更新锁文件。“类型检查”和“构建”分别报告，不会将 Node 类型擦除当作 TS 编译。
+上例使用经过验证的 SDK tgz，应随插件源码和安装包一同携带；MCP 离线创建的工程使用自己的目录副本，并设置 `install-links=true`。提交工程的 `package-lock.json`、源码、构建脚本和测试，排除 `node_modules`。平台准备流程执行锁定版本的 `npm ci`；外部编程工具执行 `npm install` 或 MCP `plugin_project_run(script:"install")` 可更新锁文件。“类型检查”和“构建”分别报告，不会将 Node 类型擦除当作 TS 编译。
 
 ```ts
 import { definePlugin } from 'blc-plugin-sdk'
@@ -148,7 +150,7 @@ const result = await sdk.workspace.import({
 
 ## API 1 修订 1 与升级规则
 
-SDK 1.1.0 保持 API 主版本 1。新插件使用 `biglazycat.minimumApiRevision: 1` 声明文档导出所需能力；宿主在安装前拒绝高于自身的修订。SDK 包版本、API 主版本/修订、RPC 线格式和安装索引格式分别维护。已有 API 1 字段、含义和错误码在普通升级中保持稳定。
+SDK 1.3.0 保持 API 主版本 1。新插件使用 `biglazycat.minimumApiRevision: 1` 声明文档导出所需能力；宿主在安装前拒绝高于自身的修订。SDK 包版本、API 主版本/修订、RPC 线格式和安装索引格式分别维护。已有 API 1 字段、含义和错误码在普通升级中保持稳定。
 
 `PluginError.code` 是机器可读错误码。宿主文档冲突、工作区切换和资源变化分别返回 `DRAFT_CONFLICT`、`WORKSPACE_CHANGED`、`RESOURCE_CHANGED`；响应过大返回 `MESSAGE_TOO_LARGE`，不结束健康插件进程。
 
@@ -183,3 +185,21 @@ GitHub Actions 在 push/PR 时检查基线 Node 22.23.3 和 Node 22.x。发布�
 ## 许可证
 
 [MIT](LICENSE)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+
+## API 1 修订 2：用户入口与明暗模式
+
+使用以下能力时声明 `minimumApiRevision: 2`。命令的 `visibility: "internal"` 隐藏命令面板、快捷键和工具栏入口，页面仍可调用；`aiCallable` 独立控制 AI 权限。省略 visibility 保持公开。页面可用 `commandPalette: false` 避免和打开命令重复。
+
+浏览器 `sdk.appearance.getColorScheme()` 同步返回宿主解析后的 `light` 或 `dark`。`sdk.appearance.onDidChangeColorScheme(listener)` 订阅变化并返回取消订阅函数。宿主在 HTML 首屏前设置 `data-color-scheme` 和 CSS `color-scheme`，桥接更新后也同步它们。宿主选择跟随系统时，插件随系统变化；具体主题包不属于此接口。
+
+插件用自己的两套配色，文章预览/导出样式独立。修订 2 页面在首个可用画面（也包括错误提示画面）提交后调用 `await sdk.ready()`，宿主结束加载提示。不要等待 `requestAnimationFrame` 才调用 ready：加载中的原生容器可能隐藏，动画帧可能暂停。`ViewSession.timings` 及插件诊断记录 mount 起算的 container、loaded、bridge、ui 毫秒数，用于区分原生容器、资源加载和插件初始化耗时。
+
+## API 1 修订 3：插件控制页面与文稿导航
+
+插件自行渲染完整页面，包括标题、返回和刷新控件；宿主只提供容器、能力和保存协议。标题仍可用于应用标签和窗口名称，页面内不会固定附加标题栏。正常页面无通用返回/刷新工具栏，加载失败时宿主保留故障提示和重载入口。
+
+使用 `sdk.ui.openDocument({ workspaceId, workspaceSession, documentId })` 时声明 `minimumApiRevision: 3`。接口在主窗口定位已有文稿标签；原标签已关闭时重新打开，不要求 editorId。合集文稿定位到对应章节，独立文稿定位到自身。
+
+浏览器导航固定绑定页面打开时的工作区会话，documentId 可由插件选择，不强制使用原文档。Node 端传入明确的工作区和会话。工作区已切换或重新打开会拒绝，导航过期后不能迟到提交。Promise 等待保存协调和主窗口确认；取消返回 NAVIGATION_CANCELLED，超时返回 NAVIGATION_TIMEOUT，工作区变化返回 WORKSPACE_CHANGED。
+
+插件决定是否在跳转前保存自己的发布稿。例如只有原文上下文完整时才显示返回按钮，先持久化并等待成功，再调用 openDocument；保存失败时保留自己的页面并显示错误。平台不会给其他插件添加相同按钮。

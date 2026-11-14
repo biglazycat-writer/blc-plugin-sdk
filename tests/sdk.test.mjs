@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { apiVersion, definePlugin } from '../index.mjs';
+import { apiVersion, apiRevision, definePlugin } from '../index.mjs';
 import { connect } from '../browser.mjs';
 
 test('standard plugin activation preserves cleanup', async () => {
@@ -10,6 +10,7 @@ test('standard plugin activation preserves cleanup', async () => {
   const dispose = await plugin.activate({ register: () => called++ });
   assert.equal(called, 1); dispose(); assert.equal(called, 2);
   assert.equal(apiVersion, 1);
+  assert.equal(apiRevision, 3);
   assert.throws(() => definePlugin(null), TypeError);
 });
 test('browser entry refuses a host without the matching bridge', async () => {
@@ -22,4 +23,10 @@ test('manifest publishes only versioned extension points', async () => {
   assert.equal(schema.properties.contributes.additionalProperties, false);
   assert.deepEqual(schema.$defs.argumentSchema.required, ['type']);
   assert.deepEqual(Object.keys(schema.properties.contributes.properties).sort(), ['commands','editors','menus','providers','schedules','services','views']);
+});
+
+test('revision 2 describes internal commands and optional page entries', async () => {
+  const schema = JSON.parse(await readFile(new URL('../manifest.schema.json', import.meta.url), 'utf8'));
+  assert.deepEqual(schema.properties.contributes.properties.commands.items.properties.visibility.enum, ['public', 'internal']);
+  assert.equal(schema.properties.contributes.properties.views.items.properties.commandPalette.default, true);
 });

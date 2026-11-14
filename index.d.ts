@@ -1,5 +1,5 @@
 export const apiVersion: 1;
-export const apiRevision: 1;
+export const apiRevision: 3;
 export { PluginError, waitForTask, readDocument } from './helpers.js';
 export type { WaitOptions, TaskWaitOptions, ExportedDocument } from './helpers.js';
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -13,6 +13,8 @@ export interface Invocation extends InvocationContext {
   progress(value: number, message?: string): Promise<void>;
 }
 export interface DocumentTarget { workspaceId: string; workspaceSession: string; documentId: string; editorId: string; windowId?: string }
+/** API 1 revision 3. Opens a creation document in the main window, without requiring a live editor. */
+export interface DocumentNavigationTarget { workspaceId: string; workspaceSession: string; documentId: string }
 export interface DocumentSnapshot extends DocumentTarget { content: string; format: 'markdown' | 'tiptap'; formatVersion?: 1; revision: string; draftHash: string; dirty: boolean }
 export type DocumentExportChunk = { exportId: string; format: 'markdown'; formatVersion: 1; chunk: string; offset: number; nextOffset: number; totalBytes: number; hash: string; revision: string; draftHash: string; dirty: boolean };
 export type WorkspaceRecord = { id: string; rootPath: string; title: string; createdAt: string; lastOpenedAt: string };
@@ -26,14 +28,14 @@ export interface ResourceRequest { workspaceId: string; workspaceSession: string
 export interface Resource { path: string; name: string; kind: string; size?: number }
 export interface Task { id: string; pluginId: string; version: string; generation: string; command: string; context: InvocationContext; state: 'waiting'|'running'|'cancelling'|'completed'|'failed'|'cancelled'|'interrupted'|'uncertain'; progress: number; hasResult: boolean; result?: Json; error?: string; errorCode?: string }
 export interface ViewOptions { location?: 'tab'|'panel'|'window'; context?: InvocationContext; state?: Json; instanceId?: string }
-export interface ViewSession { pluginId: string; viewId: string; instanceId: string; title: string; location: string; context: InvocationContext; state?: Json; dirty: boolean; connected: boolean; theme?: Record<string,string> }
+export interface ViewSession { pluginId: string; viewId: string; instanceId: string; title: string; location: string; context: InvocationContext; state?: Json; dirty: boolean; connected: boolean; theme?: Record<string,string>; colorScheme: ColorScheme; uiReady: boolean; timings?: Record<string, number> }
 export interface SharedAPI {
   images: { list(request?: {query?:string;offset?:number;limit?:number;workspaceId?:string;workspaceSession?:string}): Promise<{items:{id:string;name:string;src:string;width:number;height:number}[];total:number}>; read(request:{src:string;offset?:number;limit?:number;hash?:string;workspaceId?:string;workspaceSession?:string}): Promise<{chunk:string;total:number;hash:string}> };
   workspace: { list(): Promise<WorkspaceRecord[]>; resources(request: ResourceRequest): Promise<ResourcePage>; read(request: ResourceRequest): Promise<ResourceText>; search(request: ResourceRequest): Promise<ResourcePage>; import(request: ResourceRequest): Promise<Operation> };
   documents: { snapshot(target: DocumentTarget): Promise<DocumentSnapshot>; export(request: DocumentTarget & { exportId?: string; offset?: number; limit?: number }): Promise<DocumentExportChunk>; apply(change: DocumentChange): Promise<Operation>; operation(operationId: string): Promise<Operation> };
   storage: { get(key: string, workspaceId?: string): Promise<Json>; set(key: string, value: Json, workspaceId?: string): Promise<void> };
   views: { open(view: string, options?: ViewOptions): Promise<ViewSession> };
-  ui: { notify(message: string): Promise<void>; openFile(options?: Json): Promise<string>; saveFile(options?: Json): Promise<string>; openExternal(url: string): Promise<void> };
+  ui: { notify(message: string): Promise<void>; openFile(options?: Json): Promise<string>; saveFile(options?: Json): Promise<string>; openExternal(url: string): Promise<void>; openDocument(target: DocumentNavigationTarget): Promise<void> };
 }
 export interface PluginContext extends SharedAPI {
   apiVersion: 1; apiRevision: number; pluginId: string; generation: string; dataDir: string;
@@ -45,3 +47,6 @@ export interface PluginContext extends SharedAPI {
   ai: { run(request: { conversationId: string; text: string }): Promise<Json> };
 }
 export function definePlugin(activate: (context: PluginContext) => void | (() => void | Promise<void>) | Promise<void | (() => void | Promise<void>)>): { activate: typeof activate };
+
+/** Resolved host appearance; independent of document/export themes. */
+export type ColorScheme = 'light' | 'dark';
