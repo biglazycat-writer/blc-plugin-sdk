@@ -70,6 +70,34 @@ export default definePlugin(ctx => {
 
 所有命令和服务必须在激活时注册且与清单一致。不要在首次调用时再补注册。纯页面插件可省略 `main`；后台插件不必创建页面。普通 Node ESM/CJS 和动态导入均可使用，原生模块必须匹配系统、架构与 Node ABI。TS 路径别名、JSX/TSX 与 UI 打包遵循所选工具链。
 
+## 功能入口
+
+插件通过 `package.json` 的 `biglazycat.contributes.menus` 选择命令入口。平台按声明渲染，插件无需修改宿主界面：
+
+| `location` | 入口位置 |
+| --- | --- |
+| `resource` | 创作区资源右键菜单，包含文件、目录及工作区根目录 |
+| `editor.document` | 文章编辑器右键菜单 |
+| `editor.selection` | 文章编辑器选中文字后的右键菜单 |
+| `toolbar` | 编辑器顶部工具栏，仅在插件已启用、就绪且后台运行时显示 |
+
+同一命令可以声明多个位置；只声明所需位置即可。`commands[].contexts` 是可用条件，不决定按钮位置。公开命令默认也可从命令面板使用；用户可以自行固定工具栏入口或设置快捷键。`visibility: "internal"` 的命令不会作为用户入口显示。
+
+例如将制作书籍功能放到创作区右键菜单：
+
+```json
+{
+  "commands": [{ "id": "export.book", "title": "导出这个文件夹排版制作书籍", "contexts": ["workspace"] }],
+  "menus": [{ "location": "resource", "command": "export.book" }]
+}
+```
+
+上述字段放在 `contributes` 中。资源菜单的 `invocation.source` 为 `"resource"`，`invocation.resource` 是右键资源相对工作区的路径。根目录路径为 `""`，宿主传输时可能省略空字段，因此应在 `source === "resource"` 时用 `resource ?? ""` 解析目标。资源入口不继承当前文章编辑器身份，可通过 `workspace.resources` 获取资源类型并选择处理方式。通过命令面板运行时，插件自行提供资源选择界面。
+
+`workspace.resources` 返回的 `ResourceEntry.ModTimeUnix` 沿用 API 1 的 Unix 纳秒单位。转换 JavaScript 日期时应除以 `1_000_000` 得到毫秒，并在调用 `toISOString()` 前检查日期是否有效；缺少时间信息不应阻止读取文稿。
+
+文章导出应在后台命令中先调用 `readDocument` 捕获稿件，再调用 `views.open` 打开页面。页面导航可能卸载源编辑器，不能依赖打开页面后原 `editorId` 仍可用。大稿件分块存入插件存储，页面恢复状态只保留本次快照的引用（最多 64 KiB），每次新调用独立捕获。
+
 ## 页面、草稿与保存
 
 `contributes.views` 中的每个页面声明 `id/title/entry/defaultLocation`。`entry` 指向普通 HTML 产物，可由 Vite、React、Vue 等构建。页面中的 `blc-plugin-sdk/browser` 提供异步 `connect()`，不导入 Node 入口。
