@@ -9,3 +9,6 @@ coverage/
 .DS_Store
 .idea/
 .vscode/
+
+# 本地构建缓存
+.cache/

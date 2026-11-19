@@ -1,6 +1,6 @@
 {
   "name": "blc-plugin-sdk",
-  "version": "1.3.0",
+  "version": "1.6.0",
   "description": "大懒猫创作平台插件 SDK v1：类型定义、清单 schema 与宿主桥接入口",
   "type": "module",
   "license": "MIT",
@@ -20,6 +20,8 @@
     "./manifest.schema.json": "./manifest.schema.json"
   },
   "files": [
+    "AI.md",
+    "CAPABILITIES.md",
     "*.mjs",
     "*.d.ts",
     "manifest.schema.json",

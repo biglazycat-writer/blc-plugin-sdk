@@ -254,10 +254,10 @@
                 "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
               },
               "contract": {
-                "const": "export.text"
+                "enum": ["export.text", "ocr", "speech.tts", "text.translate"]
               },
               "version": {
-                "const": 1
+                "enum": [1, 2]
               },
               "service": {
                 "type": "string",
@@ -270,7 +270,8 @@
               "version",
               "service"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "allOf": [{"if": {"properties": {"contract": {"enum": ["export.text", "speech.tts", "text.translate"]}}}, "then": {"properties": {"version": {"const": 1}}}}]
           },
           "minItems": 0,
           "maxItems": 256

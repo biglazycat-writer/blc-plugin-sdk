@@ -10,7 +10,7 @@ test('standard plugin activation preserves cleanup', async () => {
   const dispose = await plugin.activate({ register: () => called++ });
   assert.equal(called, 1); dispose(); assert.equal(called, 2);
   assert.equal(apiVersion, 1);
-  assert.equal(apiRevision, 3);
+  assert.equal(apiRevision, 6);
   assert.throws(() => definePlugin(null), TypeError);
 });
 test('browser entry refuses a host without the matching bridge', async () => {
@@ -29,4 +29,10 @@ test('revision 2 describes internal commands and optional page entries', async (
   const schema = JSON.parse(await readFile(new URL('../manifest.schema.json', import.meta.url), 'utf8'));
   assert.deepEqual(schema.properties.contributes.properties.commands.items.properties.visibility.enum, ['public', 'internal']);
   assert.equal(schema.properties.contributes.properties.views.items.properties.commandPalette.default, true);
+});
+
+test('revision 4 declares OCR and speech provider contracts', async () => {
+  const schema = JSON.parse(await readFile(new URL('../manifest.schema.json', import.meta.url), 'utf8'));
+  assert.deepEqual(schema.properties.contributes.properties.providers.items.properties.contract.enum, ['export.text', 'ocr', 'speech.tts', 'text.translate']);
+  assert.deepEqual(schema.properties.contributes.properties.providers.items.properties.version.enum, [1, 2]);
 });

@@ -1,5 +1,5 @@
 export const apiVersion: 1;
-export const apiRevision: 3;
+export const apiRevision: 6;
 export { PluginError, waitForTask, readDocument } from './helpers.js';
 export type { WaitOptions, TaskWaitOptions, ExportedDocument } from './helpers.js';
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -26,7 +26,7 @@ export interface DocumentChange extends DocumentTarget { operationId: string; re
 export interface Operation { operationId: string; state: 'pending' | 'completed' | 'failed' | 'uncertain'; result?: Json; error?: string }
 export interface ResourceRequest { workspaceId: string; workspaceSession: string; path?: string; query?: string; offset?: number; limit?: number; content?: string; expectedHash?: string; operationId?: string }
 export interface Resource { path: string; name: string; kind: string; size?: number }
-export interface Task { id: string; pluginId: string; version: string; generation: string; command: string; context: InvocationContext; state: 'waiting'|'running'|'cancelling'|'completed'|'failed'|'cancelled'|'interrupted'|'uncertain'; progress: number; hasResult: boolean; result?: Json; error?: string; errorCode?: string }
+export interface Task { id: string; pluginId: string; version: string; generation: string; command: string; context: InvocationContext; state: 'waiting'|'running'|'cancelling'|'completed'|'failed'|'cancelled'|'interrupted'|'uncertain'; progress: number; message?: string; hasResult: boolean; result?: Json; error?: string; errorCode?: string }
 export interface ViewOptions { location?: 'tab'|'panel'|'window'; context?: InvocationContext; state?: Json; instanceId?: string }
 export interface ViewSession { pluginId: string; viewId: string; instanceId: string; title: string; location: string; context: InvocationContext; state?: Json; dirty: boolean; connected: boolean; theme?: Record<string,string>; colorScheme: ColorScheme; uiReady: boolean; timings?: Record<string, number> }
 export interface SharedAPI {
@@ -44,9 +44,45 @@ export interface PluginContext extends SharedAPI {
   services: { provide(id: string, methods: Record<string,(args: any, invocation: Invocation) => unknown|Promise<unknown>>): void; call(plugin: string, service: string, method: string, args: Json, invocation?: Invocation): Promise<Json>; list(): Promise<ServiceInfo[]> };
   events: { on(name: string, handler: (event: {id:string;name:string;workspaceId:string;payload:Json}, context: {signal:AbortSignal}) => void|Promise<void>): void; emit(name: string, payload: Json): Promise<void> };
   credentials: { get(key: string): Promise<string|null>; set(key: string, value: string): Promise<void>; delete(key: string): Promise<void> };
-  ai: { run(request: { conversationId: string; text: string }): Promise<Json> };
+  ai: {
+    run(request: { conversationId: string; text: string }): Promise<Json>;
+    /** API 1 revision 5. Enabled platform text models; no API keys or URLs. */
+    models(): Promise<AIModel[]>;
+    /** API 1 revision 5. Uses the platform model gateway; no Agent conversation. */
+    generate(request: AIGenerateRequest, options?: {signal?: AbortSignal}): Promise<AIGenerateResponse>;
+  };
 }
+export interface AIModel { id: string; name: string; isDefault: boolean }
+export interface AIGenerateRequest { prompt: string; systemPrompt?: string; modelId?: string; maxTokens?: number }
+export interface AIGenerateResponse { text: string; modelId: string; model: string; provider: string; requestId: string }
 export function definePlugin(activate: (context: PluginContext) => void | (() => void | Promise<void>) | Promise<void | (() => void | Promise<void>)>): { activate: typeof activate };
 
 /** Resolved host appearance; independent of document/export themes. */
 export type ColorScheme = 'light' | 'dark';
+
+/** API 1 revision 4: provider contracts used by desktop product features. */
+export type ProviderContract = 'export.text' | 'ocr' | 'speech.tts' | 'text.translate';
+/** Provider manifest entry; version 2 is only valid for the ocr contract (mirrors manifest.schema.json). */
+export type ProviderContribution =
+  | { id: string; contract: ProviderContract; version: 1; service: string }
+  | { id: string; contract: 'ocr'; version: 2; service: string };
+/** Base64 bytes, with UTF-8 byte offsets for JSON; SHA-256 covers the full bytes. */
+export interface ProviderByteChunk { chunk: string; nextOffset: number; total: number; hash: string; complete: boolean }
+export interface OCRProviderResult { content: string; format: 'text' | 'markdown' }
+export interface OCRProviderService {
+  put(args: {id: string; index: number; chunk: string}, invocation: Invocation): unknown;
+  finish(args: {id: string}, invocation: Invocation): unknown;
+  start(args: {transferId: string; format: 'text' | 'markdown'; source?: string}, invocation: Invocation): {jobId: string} | Promise<{jobId: string}>;
+  status(args: {jobId: string}, invocation: Invocation): {state: 'waiting' | 'running' | 'completed' | 'failed' | 'cancelled'; progress?: number; error?: string; errorCode?: string} | Promise<{state: 'waiting' | 'running' | 'completed' | 'failed' | 'cancelled'; progress?: number; error?: string; errorCode?: string}>;
+  result(args: {jobId: string; offset: number; limit: number}, invocation: Invocation): ProviderByteChunk | Promise<ProviderByteChunk>;
+  cancel(args: {jobId: string}, invocation: Invocation): unknown;
+  release(args: {transferId?: string; jobId?: string}, invocation: Invocation): unknown;
+}
+export interface SpeechProviderService {
+  voices(args: {}, invocation: Invocation): {voices: {id: string; name: string; language?: string}[]} | Promise<{voices: {id: string; name: string; language?: string}[]}>;
+  synthesize(args: {text: string; voiceId?: string; speed?: number}, invocation: Invocation): {audioId: string; mimeType: 'audio/wav' | 'audio/mpeg'} | Promise<{audioId: string; mimeType: 'audio/wav' | 'audio/mpeg'}>;
+  read(args: {audioId: string; offset: number; limit: number}, invocation: Invocation): ProviderByteChunk | Promise<ProviderByteChunk>;
+  release(args: {audioId: string}, invocation: Invocation): unknown;
+}
+export type * from './ocr-document.js';
+export type * from './translation.js';

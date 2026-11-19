@@ -1,5 +1,5 @@
 export const apiVersion = 1;
-export const apiRevision = 3;
+export const apiRevision = 6;
 export { PluginError, waitForTask, readDocument } from './helpers.mjs';
 export function definePlugin(activate) {
   if (typeof activate !== 'function') throw new TypeError('definePlugin expects activate(context)');

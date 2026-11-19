@@ -5,6 +5,8 @@
 - npm 安装：`npm install blc-plugin-sdk`
 - 后台运行环境：Node `>=22.23.3 <23.0.0`
 - 接口主版本为 1，按修订递进：修订 1 文档分块导出，修订 2 明暗模式、页面就绪与用户入口声明，修订 3 文稿导航
+- 修订 4 提供 OCR 与语音能力契约：`OCRProviderService`、`SpeechProviderService` 与标准字节分块结果
+- 修订 5 提供通用文本生成；修订 6 提供结构化 OCR 与独立的 `text.translate` 翻译契约
 - 许可证：[MIT](LICENSE)
 
 ## 快速上手
@@ -42,6 +44,10 @@ const view = await sdk.context()
 | `blc-plugin-sdk/manifest.schema.json` | `biglazycat` 清单的 JSON Schema（draft 2020-12） |
 
 ## 核心规则
+
+SDK 的通用 AI 接口由桌面端执行模型调用，复用平台模型配置；插件通过 `ctx.ai.models()` 查询模型，通过 `ctx.ai.generate()` 获取文本结果。请求与响应契约见 [通用 AI 接口](AI.md)。
+
+OCR 与语音提供者在清单的 `contributes.providers` 中声明 `ocr` 或 `speech.tts` v1，并用 `ctx.services.provide()` 注册服务。宿主将其用于 PDF、图片与文章功能；无需打开插件页面。完整开发协议见 [能力提供者接口](CAPABILITIES.md)。
 
 - **命令与任务**：命令返回宿主持有的任务，单次结果小于 1 MiB，大内容由插件自行分段传输；`invocation.signal` 协作取消，`progress()` 报告进度。取消、退出与超时可能留下 `uncertain` 的外部执行结果，不自动重试有副作用的操作。
 - **文档读写**：核心文档先 `snapshot`，再携带 `revision`、`draftHash` 与唯一 `operationId` 调用 `apply`；发布与导出场景用 `readDocument`（不可变 Markdown 快照，SHA-256 校验）。

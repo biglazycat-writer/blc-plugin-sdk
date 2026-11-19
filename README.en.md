@@ -5,6 +5,7 @@ The official plugin SDK for BigLazyCat Creator: type definitions, the manifest s
 - Install: `npm install blc-plugin-sdk`
 - Backend runtime: Node `>=22.23.3 <23.0.0`
 - API major version 1, extended by revisions: revision 1 adds chunked document export, revision 2 adds color scheme, page readiness and user-entry declarations, revision 3 adds document navigation
+- Revision 4 adds OCR and speech providers; revision 5 exposes general text generation; revision 6 adds structured OCR and independent translation providers
 - License: [MIT](LICENSE)
 
 ## Quick start
@@ -43,12 +44,16 @@ The `biglazycat` field in `package.json` is the single plugin manifest; its fiel
 
 ## Core rules
 
+Revision 4 adds `OCRProviderService` and `SpeechProviderService`. Declare an `ocr` or `speech.tts` v1 provider and register its service through `ctx.services.provide()`. BigLazyCat Creator uses it directly in PDF, image and article actions. See the bundled [provider contract](CAPABILITIES.md) for the method and byte-stream protocols.
+
 - **Commands and tasks**: a command returns a host-owned task; a single result stays under 1 MiB and large payloads are chunked by the plugin. `invocation.signal` provides cooperative cancellation and `progress()` reports progress. Cancel, exit and timeout can leave `uncertain` external results — side effects are never retried automatically.
 - **Document access**: core documents follow snapshot → `apply` with `revision`, `draftHash` and a unique `operationId`; publishing and export scenarios use `readDocument` (immutable Markdown snapshot with SHA-256 verification).
 - **Credentials**: secrets belong only in the backend's `ctx.credentials` (system credential store) — never in the manifest, sources or page state.
 - **Pages**: `setState` is a JSON checkpoint of at most 64 KiB; the bridge is injected by the host and pages must not import Node modules.
 
 ## Development and publishing (this repository)
+
+The SDK exposes general AI model discovery and text generation through `ctx.ai.models()` and `ctx.ai.generate()`. The desktop host owns model configuration and credentials; plugins supply their own prompts and processing logic. See the [AI interface contract](AI.md).
 
 ```bash
 npm ci
