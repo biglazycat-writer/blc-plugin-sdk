@@ -2,6 +2,23 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 
+## [1.6.0] - 2026-11-20
+
+- API 1 修订 6：OCR v2 提供者契约，保留阅读顺序、行与片段、列表与合并单元格，坐标统一为 0–1。
+- 新增 `text.translate` v1 通用翻译契约，服务方法为 `languages/translate`。
+- 新增 `ocr-document.d.ts`、`translation.d.ts` 与能力提供者文档 `CAPABILITIES.md`。
+- 最低客户端版本随修订登记为 0.4.9；已有 API 1 契约保持稳定。
+
+## [1.5.0] - 2026-11-19
+
+- API 1 修订 5：通用 AI 模型查询与文本生成接口，由桌面端统一调用模型网关、管理凭据并记录 AI 日志。
+- 新增 `AI.md` 说明调用约定与错误语义；最低客户端版本 0.4.8。
+
+## [1.4.0] - 2026-11-19
+
+- API 1 修订 4：`export.text`、`ocr` v1 与 `speech.tts` 能力提供者声明，带版本校验。
+- 新增 `ProviderContract` 与提供者清单类型，配套 `SpeechProviderService`、OCR 服务类型。
+
 ## [1.3.0] - 2026-11-15
 
 - API 1 修订 3：`ui.openDocument` 在主窗口打开指定工作区会话的文稿，不要求原编辑器仍打开。
