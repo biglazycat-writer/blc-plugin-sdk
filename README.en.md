@@ -68,3 +68,7 @@ This repository is the authoritative source for the public SDK; the host ships a
 - Template: [blc-plugin-template](https://github.com/biglazycat-writer/blc-plugin-template) — a ready-to-run plugin starting point
 - Reference implementations: [blc-export-book](https://github.com/biglazycat-writer/blc-export-book) (typeset export), [blc-plugin-publish](https://github.com/biglazycat-writer/blc-plugin-publish) (WeChat publishing)
 - Help center "Plugin Development" section: in-app development process and SDK reference
+
+## User-facing features
+
+Declare each configurable action in `contributes.features`, including where it can appear and what it runs. BigLazyCat Creator lets users choose among those locations. See the [feature declaration reference](FEATURES.md).

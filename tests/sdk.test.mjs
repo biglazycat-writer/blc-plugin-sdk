@@ -10,7 +10,7 @@ test('standard plugin activation preserves cleanup', async () => {
   const dispose = await plugin.activate({ register: () => called++ });
   assert.equal(called, 1); dispose(); assert.equal(called, 2);
   assert.equal(apiVersion, 1);
-  assert.equal(apiRevision, 6);
+  assert.equal(apiRevision, 7);
   assert.throws(() => definePlugin(null), TypeError);
 });
 test('browser entry refuses a host without the matching bridge', async () => {
@@ -22,7 +22,7 @@ test('manifest publishes only versioned extension points', async () => {
   assert.equal(schema.additionalProperties, false);
   assert.equal(schema.properties.contributes.additionalProperties, false);
   assert.deepEqual(schema.$defs.argumentSchema.required, ['type']);
-  assert.deepEqual(Object.keys(schema.properties.contributes.properties).sort(), ['commands','editors','menus','providers','schedules','services','views']);
+  assert.deepEqual(Object.keys(schema.properties.contributes.properties).sort(), ['commands','editors','features','menus','providers','schedules','services','views']);
 });
 
 test('revision 2 describes internal commands and optional page entries', async () => {
@@ -35,4 +35,14 @@ test('revision 4 declares OCR and speech provider contracts', async () => {
   const schema = JSON.parse(await readFile(new URL('../manifest.schema.json', import.meta.url), 'utf8'));
   assert.deepEqual(schema.properties.contributes.properties.providers.items.properties.contract.enum, ['export.text', 'ocr', 'speech.tts', 'text.translate']);
   assert.deepEqual(schema.properties.contributes.properties.providers.items.properties.version.enum, [1, 2]);
+});
+
+test('revision 7 lets plugins declare the exact feature actions and locations', async () => {
+  const schema = JSON.parse(await readFile(new URL('../manifest.schema.json', import.meta.url), 'utf8'));
+  const feature = schema.properties.contributes.properties.features.items;
+  assert.deepEqual(feature.required, ['id', 'title', 'actions']);
+  assert.deepEqual(Object.keys(feature.properties.actions.properties), ['toolbar', 'editor', 'resource', 'sidebar']);
+  assert.equal(feature.properties.actions.additionalProperties, false);
+  assert.deepEqual(feature.properties.actions.properties.toolbar.oneOf, [{required:['command']},{required:['view']},{required:['speech']}]);
+  assert.equal(feature.properties.defaults.uniqueItems, true);
 });

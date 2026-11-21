@@ -69,3 +69,7 @@ npm pack --dry-run  # 核对 npm 包内容
 - 模板工程：[blc-plugin-template](https://github.com/biglazycat-writer/blc-plugin-template) —— 开箱即跑的插件起点
 - 参考实现：[blc-export-book](https://github.com/biglazycat-writer/blc-export-book)（排版导出）、[blc-plugin-publish](https://github.com/biglazycat-writer/blc-plugin-publish)（微信公众号发布）
 - 帮助中心「插件开发」章节：桌面端内的开发流程与 SDK 接口速查
+
+## 用户功能入口
+
+在 `contributes.features` 声明要展示的功能、支持的位置和对应动作。用户在插件详情中选择使用入口；声明与示例见 [功能入口协议](FEATURES.md)。

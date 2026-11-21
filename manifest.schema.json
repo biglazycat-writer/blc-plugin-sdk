@@ -254,10 +254,18 @@
                 "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
               },
               "contract": {
-                "enum": ["export.text", "ocr", "speech.tts", "text.translate"]
+                "enum": [
+                  "export.text",
+                  "ocr",
+                  "speech.tts",
+                  "text.translate"
+                ]
               },
               "version": {
-                "enum": [1, 2]
+                "enum": [
+                  1,
+                  2
+                ]
               },
               "service": {
                 "type": "string",
@@ -271,7 +279,28 @@
               "service"
             ],
             "additionalProperties": false,
-            "allOf": [{"if": {"properties": {"contract": {"enum": ["export.text", "speech.tts", "text.translate"]}}}, "then": {"properties": {"version": {"const": 1}}}}]
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "contract": {
+                      "enum": [
+                        "export.text",
+                        "speech.tts",
+                        "text.translate"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "version": {
+                      "const": 1
+                    }
+                  }
+                }
+              }
+            ]
           },
           "minItems": 0,
           "maxItems": 256
@@ -348,6 +377,196 @@
           },
           "minItems": 0,
           "maxItems": 256
+        },
+        "features": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 256,
+          "description": "API 1 revision 7. Plugin-owned configurable user features; public RPC commands and providers do not automatically create features.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string"
+              },
+              "actions": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 4,
+                "properties": {
+                  "toolbar": {
+                    "type": "object",
+                    "properties": {
+                      "command": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "view": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "speech": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "oneOf": [
+                      {
+                        "required": [
+                          "command"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "view"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "speech"
+                        ]
+                      }
+                    ]
+                  },
+                  "editor": {
+                    "type": "object",
+                    "properties": {
+                      "command": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "view": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "speech": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "oneOf": [
+                      {
+                        "required": [
+                          "command"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "view"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "speech"
+                        ]
+                      }
+                    ]
+                  },
+                  "resource": {
+                    "type": "object",
+                    "properties": {
+                      "command": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "view": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "speech": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "oneOf": [
+                      {
+                        "required": [
+                          "command"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "view"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "speech"
+                        ]
+                      }
+                    ]
+                  },
+                  "sidebar": {
+                    "type": "object",
+                    "properties": {
+                      "command": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "view": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      },
+                      "speech": {
+                        "type": "string",
+                        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "oneOf": [
+                      {
+                        "required": [
+                          "command"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "view"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "speech"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "defaults": {
+                "type": "array",
+                "maxItems": 4,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "toolbar",
+                    "editor",
+                    "resource",
+                    "sidebar"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "actions"
+            ],
+            "additionalProperties": false
+          }
         }
       },
       "required": [],

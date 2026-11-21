@@ -1,5 +1,5 @@
 export const apiVersion: 1;
-export const apiRevision: 6;
+export const apiRevision: 7;
 export { PluginError, waitForTask, readDocument } from './helpers.js';
 export type { WaitOptions, TaskWaitOptions, ExportedDocument } from './helpers.js';
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -86,3 +86,17 @@ export interface SpeechProviderService {
 }
 export type * from './ocr-document.js';
 export type * from './translation.js';
+
+/** API 1 revision 7: user-facing features declared by the plugin. */
+export type FeatureLocation = 'toolbar' | 'editor' | 'resource' | 'sidebar';
+export type FeatureAction =
+  | { command: string; view?: never; speech?: never }
+  | { view: string; command?: never; speech?: never }
+  | { speech: string; command?: never; view?: never };
+export interface FeatureContribution {
+  id: string;
+  title: string;
+  description?: string;
+  actions: Partial<Record<FeatureLocation, FeatureAction>>;
+  defaults?: FeatureLocation[];
+}

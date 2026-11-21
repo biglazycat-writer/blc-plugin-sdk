@@ -59,3 +59,13 @@ const opened: void = await browser.ui.openDocument({ workspaceId: 'w', workspace
 await browser.ui.openDocument({ documentId: 'd' });
 void opened;
 void mode; unsubscribe();
+
+const feature: import('blc-plugin-sdk').FeatureContribution = {
+  id: 'publish', title: 'Publish', actions: {toolbar: {command: 'publish.open'}, editor: {command: 'publish.open'}}, defaults: ['toolbar']
+};
+const speechFeature: import('blc-plugin-sdk').FeatureContribution = {id:'play',title:'Play article',actions:{editor:{speech:'tts'}}};
+// @ts-expect-error A feature location must be supported by the host.
+const invalidLocation: import('blc-plugin-sdk').FeatureLocation = 'window';
+// @ts-expect-error An action cannot invoke a command and open a page simultaneously.
+const invalidAction: import('blc-plugin-sdk').FeatureAction = {command:'open',view:'main'};
+void feature; void speechFeature; void invalidLocation; void invalidAction;
