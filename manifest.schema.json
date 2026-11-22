@@ -586,7 +586,7 @@
   ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "大懒猫创作平台 package.json.biglazycat",
+  "title": "大懒猫写作 package.json.biglazycat",
   "description": "SDK API 1；宿主还校验平台、引擎版本、路径存在性、引用、重复 ID 与依赖。",
   "$defs": {
     "argumentSchema": {

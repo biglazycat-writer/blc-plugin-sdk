@@ -1,7 +1,7 @@
 {
   "name": "blc-plugin-sdk",
   "version": "1.7.0",
-  "description": "大懒猫创作平台插件 SDK v1：类型定义、清单 schema 与宿主桥接入口",
+  "description": "大懒猫写作插件 SDK v1：类型定义、清单 schema 与宿主桥接入口",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -37,7 +37,7 @@
     "biglazycat",
     "plugin",
     "sdk",
-    "大懒猫创作平台"
+    "大懒猫写作"
   ],
   "repository": {
     "type": "git",

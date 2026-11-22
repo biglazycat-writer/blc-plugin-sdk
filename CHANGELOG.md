@@ -1,6 +1,6 @@
 # 更新日志
 
-记录大懒猫创作平台插件 SDK 的公开能力与变更。
+记录大懒猫写作插件 SDK 的公开能力与变更。
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循语义化版本。
 

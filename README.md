@@ -1,6 +1,6 @@
-# 大懒猫创作平台插件 SDK（blc-plugin-sdk）
+# 大懒猫写作插件 SDK（blc-plugin-sdk）
 
-大懒猫创作平台的官方插件 SDK：类型定义、清单 schema 与宿主桥接入口。插件后台与页面通过它和桌面端通信，实际平台能力由宿主桥接提供。
+大懒猫写作的官方插件 SDK：类型定义、清单 schema 与宿主桥接入口。插件后台与页面通过它和桌面端通信，实际平台能力由宿主桥接提供。
 
 - npm 安装：`npm install blc-plugin-sdk`
 - 后台运行环境：Node `>=22.23.3 <23.0.0`
@@ -19,7 +19,7 @@ import { definePlugin } from 'blc-plugin-sdk'
 export default definePlugin(ctx => {
   ctx.commands.register('hello', async (_args, invocation) => {
     invocation.signal.throwIfAborted()
-    return { message: '你好，大懒猫创作平台！' }
+    return { message: '你好，大懒猫写作！' }
   })
   return async () => { /* 释放自己创建的连接、监听器等 */ }
 })

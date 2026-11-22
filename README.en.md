@@ -1,6 +1,6 @@
-# BigLazyCat Creator Plugin SDK (blc-plugin-sdk)
+# BigLazyCat Writer Plugin SDK (blc-plugin-sdk)
 
-The official plugin SDK for BigLazyCat Creator: type definitions, the manifest schema and the host bridge entries. Plugin backends and pages talk to the desktop app through it; actual platform capabilities are provided by the host bridge.
+The official plugin SDK for BigLazyCat Writer: type definitions, the manifest schema and the host bridge entries. Plugin backends and pages talk to the desktop app through it; actual platform capabilities are provided by the host bridge.
 
 - Install: `npm install blc-plugin-sdk`
 - Backend runtime: Node `>=22.23.3 <23.0.0`
@@ -18,7 +18,7 @@ import { definePlugin } from 'blc-plugin-sdk'
 export default definePlugin(ctx => {
   ctx.commands.register('hello', async (_args, invocation) => {
     invocation.signal.throwIfAborted()
-    return { message: 'Hello, BigLazyCat Creator!' }
+    return { message: 'Hello, BigLazyCat Writer!' }
   })
   return async () => { /* release connections, listeners, etc. */ }
 })
@@ -44,7 +44,7 @@ The `biglazycat` field in `package.json` is the single plugin manifest; its fiel
 
 ## Core rules
 
-Revision 4 adds `OCRProviderService` and `SpeechProviderService`. Declare an `ocr` or `speech.tts` v1 provider and register its service through `ctx.services.provide()`. BigLazyCat Creator uses it directly in PDF, image and article actions. See the bundled [provider contract](CAPABILITIES.md) for the method and byte-stream protocols.
+Revision 4 adds `OCRProviderService` and `SpeechProviderService`. Declare an `ocr` or `speech.tts` v1 provider and register its service through `ctx.services.provide()`. BigLazyCat Writer uses it directly in PDF, image and article actions. See the bundled [provider contract](CAPABILITIES.md) for the method and byte-stream protocols.
 
 - **Commands and tasks**: a command returns a host-owned task; a single result stays under 1 MiB and large payloads are chunked by the plugin. `invocation.signal` provides cooperative cancellation and `progress()` reports progress. Cancel, exit and timeout can leave `uncertain` external results — side effects are never retried automatically.
 - **Document access**: core documents follow snapshot → `apply` with `revision`, `draftHash` and a unique `operationId`; publishing and export scenarios use `readDocument` (immutable Markdown snapshot with SHA-256 verification).
@@ -71,4 +71,4 @@ This repository is the authoritative source for the public SDK; the host ships a
 
 ## User-facing features
 
-Declare each configurable action in `contributes.features`, including where it can appear and what it runs. BigLazyCat Creator lets users choose among those locations. See the [feature declaration reference](FEATURES.md).
+Declare each configurable action in `contributes.features`, including where it can appear and what it runs. BigLazyCat Writer lets users choose among those locations. See the [feature declaration reference](FEATURES.md).

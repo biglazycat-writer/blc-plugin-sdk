@@ -1,6 +1,6 @@
 # 功能入口声明
 
-大懒猫创作平台的功能入口协议让插件决定展示哪些用户功能，再由用户选择把功能放在哪里。
+大懒猫写作的功能入口协议让插件决定展示哪些用户功能，再由用户选择把功能放在哪里。
 
 在 `biglazycat.contributes.features` 声明功能，设置 `minimumApiRevision: 7`，并按客户端版本要求声明最低宿主。类型定义为 SDK 的 `FeatureContribution`；当前版本要求见 CHANGELOG。
 
