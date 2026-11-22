@@ -1,5 +1,5 @@
 export const apiVersion: 1;
-export const apiRevision: 7;
+export const apiRevision: 8;
 export { PluginError, waitForTask, readDocument } from './helpers.js';
 export type { WaitOptions, TaskWaitOptions, ExportedDocument } from './helpers.js';
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };

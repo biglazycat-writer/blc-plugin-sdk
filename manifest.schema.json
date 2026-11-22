@@ -24,6 +24,11 @@
       "type": "string",
       "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$"
     },
+    "icon": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "API 1 revision 8. 插件图标：tabler:xxx 或 lucide:xxx 内置图标名、包内图片相对路径（.png/.jpg/.jpeg/.webp，不超过 256 KiB，随包分发并由宿主经 /plugin-icon/ 提供给主界面），或不超过 8 个字符的 emoji/短文本。声明本字段需要 minimumApiRevision: 8。"
+    },
     "platforms": {
       "type": "array",
       "items": {

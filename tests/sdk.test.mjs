@@ -10,7 +10,7 @@ test('standard plugin activation preserves cleanup', async () => {
   const dispose = await plugin.activate({ register: () => called++ });
   assert.equal(called, 1); dispose(); assert.equal(called, 2);
   assert.equal(apiVersion, 1);
-  assert.equal(apiRevision, 7);
+  assert.equal(apiRevision, 8);
   assert.throws(() => definePlugin(null), TypeError);
 });
 test('browser entry refuses a host without the matching bridge', async () => {
@@ -45,4 +45,14 @@ test('revision 7 lets plugins declare the exact feature actions and locations', 
   assert.equal(feature.properties.actions.additionalProperties, false);
   assert.deepEqual(feature.properties.actions.properties.toolbar.oneOf, [{required:['command']},{required:['view']},{required:['speech']}]);
   assert.equal(feature.properties.defaults.uniqueItems, true);
+});
+
+test('revision 8 declares the plugin icon in three forms', async () => {
+  const schema = JSON.parse(await readFile(new URL('../manifest.schema.json', import.meta.url), 'utf8'));
+  const icon = schema.properties.icon;
+  assert.equal(icon.type, 'string');
+  assert.equal(icon.maxLength, 200);
+  assert.match(icon.description, /revision 8/);
+  assert.match(icon.description, /minimumApiRevision: 8/);
+  assert.match(icon.description, /256 KiB/);
 });

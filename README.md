@@ -7,6 +7,7 @@
 - 接口主版本为 1，按修订递进：修订 1 文档分块导出，修订 2 明暗模式、页面就绪与用户入口声明，修订 3 文稿导航
 - 修订 4 提供 OCR 与语音能力契约：`OCRProviderService`、`SpeechProviderService` 与标准字节分块结果
 - 修订 5 提供通用文本生成；修订 6 提供结构化 OCR 与独立的 `text.translate` 翻译契约
+- 修订 7 插件决定功能入口；修订 8 支持在清单 `icon` 中声明插件图标
 - 许可证：[MIT](LICENSE)
 
 ## 快速上手
@@ -73,3 +74,13 @@ npm pack --dry-run  # 核对 npm 包内容
 ## 用户功能入口
 
 在 `contributes.features` 声明要展示的功能、支持的位置和对应动作。用户在插件详情中选择使用入口；声明与示例见 [功能入口协议](FEATURES.md)。
+
+## 插件图标
+
+在清单的 `icon` 中声明插件图标，插件页、侧栏入口与插件商店卡片都会显示：
+
+- `tabler:cat`、`lucide:sparkles`：宿主内置图标库中的图标名；
+- `assets/logo.png`：随包分发的图片（`.png/.jpg/.jpeg/.webp`，不超过 256 KiB），宿主经 `/plugin-icon/` 提供给主界面；
+- `🐱`：不超过 8 个字符的 emoji 或短文本。
+
+声明 `icon` 需要 `minimumApiRevision: 8`；未声明时界面维持拼图占位图标。校验规则与错误码见宿主的 `docs/plugin-contract.md` 修订 8 小节。
