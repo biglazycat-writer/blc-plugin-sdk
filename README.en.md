@@ -1,11 +1,14 @@
 # BigLazyCat Writer Plugin SDK (blc-plugin-sdk)
 
+[简体中文](README.md) | **English**
+
 The official plugin SDK for BigLazyCat Writer: type definitions, the manifest schema and the host bridge entries. Plugin backends and pages talk to the desktop app through it; actual platform capabilities are provided by the host bridge.
 
 - Install: `npm install blc-plugin-sdk`
 - Backend runtime: Node `>=22.23.3 <23.0.0`
 - API major version 1, extended by revisions: revision 1 adds chunked document export, revision 2 adds color scheme, page readiness and user-entry declarations, revision 3 adds document navigation
-- Revision 4 adds OCR and speech providers; revision 5 exposes general text generation; revision 6 adds structured OCR and independent translation providers
+- Revision 4 adds `OCRProviderService` and `SpeechProviderService` contracts with standard byte-chunk results; revision 5 adds general text generation; revision 6 adds structured OCR and the independent `text.translate` contract
+- Revision 7 lets plugins decide which user-facing feature entries appear; revision 8 allows a plugin icon to be declared in the manifest
 - License: [MIT](LICENSE)
 
 ## Quick start
@@ -44,7 +47,9 @@ The `biglazycat` field in `package.json` is the single plugin manifest; its fiel
 
 ## Core rules
 
-Revision 4 adds `OCRProviderService` and `SpeechProviderService`. Declare an `ocr` or `speech.tts` v1 provider and register its service through `ctx.services.provide()`. BigLazyCat Writer uses it directly in PDF, image and article actions. See the bundled [provider contract](CAPABILITIES.md) for the method and byte-stream protocols.
+The SDK's general AI interface runs model calls in the desktop host, reusing the platform's model configuration. Plugins discover models with `ctx.ai.models()` and obtain text results via `ctx.ai.generate()`. See the [AI interface contract](AI.md) for the request and response contract.
+
+Declare an `ocr` or `speech.tts` v1 provider under the manifest's `contributes.providers` and register the service with `ctx.services.provide()`. The host uses it in PDF, image and article features — no plugin page needs to be open. See the [provider contract](CAPABILITIES.md) for the full development protocol.
 
 - **Commands and tasks**: a command returns a host-owned task; a single result stays under 1 MiB and large payloads are chunked by the plugin. `invocation.signal` provides cooperative cancellation and `progress()` reports progress. Cancel, exit and timeout can leave `uncertain` external results — side effects are never retried automatically.
 - **Document access**: core documents follow snapshot → `apply` with `revision`, `draftHash` and a unique `operationId`; publishing and export scenarios use `readDocument` (immutable Markdown snapshot with SHA-256 verification).
@@ -52,8 +57,6 @@ Revision 4 adds `OCRProviderService` and `SpeechProviderService`. Declare an `oc
 - **Pages**: `setState` is a JSON checkpoint of at most 64 KiB; the bridge is injected by the host and pages must not import Node modules.
 
 ## Development and publishing (this repository)
-
-The SDK exposes general AI model discovery and text generation through `ctx.ai.models()` and `ctx.ai.generate()`. The desktop host owns model configuration and credentials; plugins supply their own prompts and processing logic. See the [AI interface contract](AI.md).
 
 ```bash
 npm ci
@@ -72,3 +75,13 @@ This repository is the authoritative source for the public SDK; the host ships a
 ## User-facing features
 
 Declare each configurable action in `contributes.features`, including where it can appear and what it runs. BigLazyCat Writer lets users choose among those locations. See the [feature declaration reference](FEATURES.md).
+
+## Plugin icons
+
+Declare an icon in the manifest's `icon` field; it appears on the plugin page, sidebar entries and plugin-store cards:
+
+- `tabler:cat`, `lucide:sparkles`: names from the host's built-in icon libraries;
+- `assets/logo.png`: an image shipped with the plugin (`.png/.jpg/.jpeg/.webp`, up to 256 KiB), served by the host through `/plugin-icon/`;
+- `🐱`: an emoji or short text of at most 8 characters.
+
+Declaring `icon` requires `minimumApiRevision: 8`; without it the UI keeps the puzzle-piece placeholder. Validation rules and error codes are described in the host's `docs/plugin-contract.md`, revision 8 section.

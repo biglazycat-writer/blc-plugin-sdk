@@ -1,5 +1,7 @@
 # 大懒猫写作插件 SDK（blc-plugin-sdk）
 
+**简体中文** | [English](README.en.md)
+
 大懒猫写作的官方插件 SDK：类型定义、清单 schema 与宿主桥接入口。插件后台与页面通过它和桌面端通信，实际平台能力由宿主桥接提供。
 
 - npm 安装：`npm install blc-plugin-sdk`
